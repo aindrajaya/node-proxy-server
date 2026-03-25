@@ -9,15 +9,19 @@ const {
   mockRequestUpstream,
   mockReadUpstreamBody,
   mockListDevices,
+  mockListRegions,
   mockListRealtimeAll,
   mockListRealtimeDevice,
+  mockResolveRegionLookup,
 } = vi.hoisted(() => ({
   mockIsTokenBlocked: vi.fn(),
   mockRequestUpstream: vi.fn(),
   mockReadUpstreamBody: vi.fn(),
   mockListDevices: vi.fn(),
+  mockListRegions: vi.fn(),
   mockListRealtimeAll: vi.fn(),
   mockListRealtimeDevice: vi.fn(),
+  mockResolveRegionLookup: vi.fn(),
 }));
 
 vi.mock('../src/blocklist/tokenBlocklist', () => ({
@@ -32,6 +36,11 @@ vi.mock('../src/services/upstreamService', () => ({
 
 vi.mock('../src/services/deviceService', () => ({
   listDevices: mockListDevices,
+}));
+
+vi.mock('../src/services/regionService', () => ({
+  listRegions: mockListRegions,
+  resolveRegionLookup: mockResolveRegionLookup,
 }));
 
 vi.mock('../src/services/realtimeService', () => ({
@@ -177,6 +186,89 @@ describe('proxy RBAC routes', () => {
           kabupaten_id: '3171',
         },
       ],
+    });
+  });
+
+  it('returns province lookup payload for authenticated users', async () => {
+    mockListRegions.mockResolvedValue({
+      status: true,
+      message: 'Data provinsi berhasil diambil',
+      total: 1,
+      data: [{ id: '14', nama: 'Riau', latitude: 0, longitude: 0 }],
+    });
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/proxy/regions/provinces',
+      cookies: {
+        [config.COOKIE_NAME]: buildCookie({
+          sub: '1',
+          username: 'admin',
+          name: 'Administrator',
+          role: 'admin',
+          pemdaScopeLevel: null,
+          perusahaanId: null,
+          perusahaanName: null,
+          provinsiId: null,
+          kabupatenId: null,
+        }),
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(mockListRegions).toHaveBeenCalledWith('provinsi', {});
+    expect(response.json()).toEqual({
+      status: true,
+      message: 'Data provinsi berhasil diambil',
+      total: 1,
+      data: [{ id: '14', nama: 'Riau', latitude: 0, longitude: 0 }],
+    });
+  });
+
+  it('resolves region names from ids', async () => {
+    mockResolveRegionLookup.mockResolvedValue({
+      status: true,
+      message: 'Nama wilayah berhasil di-resolve',
+      data: {
+        provinsi_nama: 'Riau',
+        kabupaten_nama: 'Kepulauan Meranti',
+        kecamatan_nama: null,
+        kelurahan_nama: null,
+      },
+    });
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/proxy/regions/resolve?provinsi_id=14&kabupaten_id=1410',
+      cookies: {
+        [config.COOKIE_NAME]: buildCookie({
+          sub: '1',
+          username: 'admin',
+          name: 'Administrator',
+          role: 'admin',
+          pemdaScopeLevel: null,
+          perusahaanId: null,
+          perusahaanName: null,
+          provinsiId: null,
+          kabupatenId: null,
+        }),
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(mockResolveRegionLookup).toHaveBeenCalledWith({
+      provinsi_id: '14',
+      kabupaten_id: '1410',
+    });
+    expect(response.json()).toEqual({
+      status: true,
+      message: 'Nama wilayah berhasil di-resolve',
+      data: {
+        provinsi_nama: 'Riau',
+        kabupaten_nama: 'Kepulauan Meranti',
+        kecamatan_nama: null,
+        kelurahan_nama: null,
+      },
     });
   });
 
