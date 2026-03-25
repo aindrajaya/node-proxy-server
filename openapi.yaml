@@ -1,0 +1,531 @@
+openapi: 3.0.3
+info:
+  title: TMAT Auth Proxy Server API
+  description: API documentation for the TMAT auth proxy service as currently implemented.
+  version: 1.1.0
+servers:
+  - url: http://localhost:4000
+    description: Local Development Fastify Server
+  - url: https://proxy.yourdomain.com
+    description: Production Environment
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: tmat_session
+
+  schemas:
+    LoginCredentials:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          description: Registered username or email from MySQL.
+          example: admin@kemenlh.mail
+        password:
+          type: string
+          description: Raw password verified against bcrypt hash in MySQL.
+          example: AdminPassword123
+
+    UserProfile:
+      type: object
+      required:
+        - id
+        - username
+        - name
+        - role
+        - pemdaScopeLevel
+        - perusahaanId
+        - perusahaanName
+        - provinsiId
+        - kabupatenId
+      properties:
+        id:
+          type: number
+        username:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [admin, perusahaan, pemda]
+        pemdaScopeLevel:
+          type: string
+          nullable: true
+          enum: [provinsi, kabupaten, null]
+        perusahaanId:
+          type: number
+          nullable: true
+        perusahaanName:
+          type: string
+          nullable: true
+        provinsiId:
+          type: string
+          nullable: true
+        kabupatenId:
+          type: string
+          nullable: true
+
+    AuthenticationResponse:
+      type: object
+      required:
+        - user
+      properties:
+        user:
+          $ref: '#/components/schemas/UserProfile'
+
+    EffectiveScope:
+      oneOf:
+        - type: object
+          required:
+            - type
+          properties:
+            type:
+              type: string
+              enum: [global]
+        - type: object
+          required:
+            - type
+            - perusahaanId
+            - perusahaanName
+          properties:
+            type:
+              type: string
+              enum: [perusahaan]
+            perusahaanId:
+              type: number
+              nullable: true
+            perusahaanName:
+              type: string
+              nullable: true
+        - type: object
+          required:
+            - type
+            - provinsiId
+          properties:
+            type:
+              type: string
+              enum: [pemda_provinsi]
+            provinsiId:
+              type: string
+              nullable: true
+        - type: object
+          required:
+            - type
+            - provinsiId
+            - kabupatenId
+          properties:
+            type:
+              type: string
+              enum: [pemda_kabupaten]
+            provinsiId:
+              type: string
+              nullable: true
+            kabupatenId:
+              type: string
+              nullable: true
+
+    DebugSessionResponse:
+      type: object
+      required:
+        - user
+        - effectiveScope
+      properties:
+        user:
+          $ref: '#/components/schemas/UserProfile'
+        effectiveScope:
+          $ref: '#/components/schemas/EffectiveScope'
+
+    MessageResponse:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+
+tags:
+  - name: Authentication
+    description: Login, session inspection, and logout routes.
+  - name: Proxy Endpoints
+    description: Role-aware proxy endpoints backed by either TMAT upstream or direct MySQL queries.
+
+paths:
+  /auth/login:
+    post:
+      summary: Login using database credentials
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginCredentials'
+      responses:
+        '200':
+          description: Login successful. Attaches the `tmat_session` HttpOnly cookie.
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                description: tmat_session={JWT}; HttpOnly; Secure; SameSite=Strict; Path=/
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticationResponse'
+        '401':
+          description: Invalid user credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Inactive account or missing pemda scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too many login attempts from the same IP
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/me:
+    get:
+      summary: Retrieve the authenticated session profile
+      tags: [Authentication]
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Current verified user profile from session JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticationResponse'
+        '401':
+          description: No session cookie or revoked session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Invalid or expired session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/debug-session:
+    get:
+      summary: Inspect authenticated session scope for debugging
+      tags: [Authentication]
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Current user profile and effective scope interpretation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DebugSessionResponse'
+        '401':
+          description: No session cookie or revoked session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Invalid or expired session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/logout:
+    post:
+      summary: Clear the session cookie and revoke the token if present
+      tags: [Authentication]
+      responses:
+        '200':
+          description: Logout is always successful, even without a session cookie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  /proxy/perusahaan:
+    get:
+      summary: Proxy perusahaan list or own perusahaan detail depending on role
+      tags: [Proxy Endpoints]
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Upstream perusahaan data returned with API key injection
+        '401':
+          description: No session cookie or revoked session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Invalid or expired session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '502':
+          description: Upstream service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /proxy/perusahaan/{id}:
+    get:
+      summary: Proxy specific perusahaan detail
+      tags: [Proxy Endpoints]
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: number
+          required: true
+      responses:
+        '200':
+          description: Upstream perusahaan detail returned
+        '401':
+          description: No session cookie or revoked session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Invalid session or cross-company access blocked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '502':
+          description: Upstream service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /proxy/device:
+    get:
+      summary: Query device data from MySQL with role-aware scoping
+      tags: [Proxy Endpoints]
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: query
+          name: id_perusahaan
+          schema:
+            type: number
+          description: Automatically overridden for `perusahaan` users
+        - in: query
+          name: device_id_unik
+          schema:
+            type: string
+        - in: query
+          name: tipe_alat
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [aktif, nonaktif, perbaikan]
+        - in: query
+          name: provinsi_id
+          schema:
+            type: string
+        - in: query
+          name: kabupaten_id
+          schema:
+            type: string
+        - in: query
+          name: kode_titik
+          schema:
+            type: string
+        - in: query
+          name: kode_blok
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Device data returned directly from `master_device` with SQL-level scope enforcement and no upstream API key usage
+        '401':
+          description: No session cookie or revoked session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Invalid or expired session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Device query failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /proxy/realtime_all:
+    get:
+      summary: Query latest realtime data per device from MySQL with role-aware scoping
+      tags: [Proxy Endpoints]
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: query
+          name: id_perusahaan
+          schema:
+            type: number
+          description: Automatically overridden for `perusahaan` users
+        - in: query
+          name: device_id
+          schema:
+            type: string
+          description: Optional device filter by `device_id_unik` or internal numeric device id
+        - in: query
+          name: start_date
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: end_date
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: limit
+          schema:
+            type: number
+            default: 100
+            maximum: 500
+        - in: query
+          name: offset
+          schema:
+            type: number
+            default: 0
+      responses:
+        '200':
+          description: Latest realtime data returned from `data_realtime` joined with `master_device`, with SQL-level scope enforcement and no upstream API key usage
+        '401':
+          description: No session cookie or revoked session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Invalid or expired session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Realtime query failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /proxy/realtime_device:
+    get:
+      summary: Query historical realtime data for a single authorized device from MySQL
+      tags: [Proxy Endpoints]
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: query
+          name: device_id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: start_date
+          required: true
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: end_date
+          required: true
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: limit
+          schema:
+            type: number
+            default: 100
+        - in: query
+          name: offset
+          schema:
+            type: number
+            default: 0
+      responses:
+        '200':
+          description: Historical realtime data returned from `data_realtime` for an authorized device without upstream API key usage
+        '400':
+          description: Missing required `device_id`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: No session cookie or revoked session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Device is outside authorized role scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Realtime device query failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /proxy/map:
+    get:
+      summary: Public map route proxied with admin-tier API key
+      tags: [Proxy Endpoints]
+      responses:
+        '200':
+          description: Map content returned from upstream
+        '502':
+          description: Upstream service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'

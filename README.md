@@ -1,6 +1,6 @@
 # TMAT Auth Proxy Service
 
-Node.js + Fastify auth proxy untuk TMAT Monitoring. Service ini menangani login user dari database TMAT, menyimpan session di cookie `HttpOnly`, lalu meneruskan request ke backend upstream dengan `X-API-KEY` yang sesuai scope user.
+Node.js + Fastify auth proxy untuk TMAT Monitoring. Service ini menangani login user dari database TMAT, menyimpan session di cookie `HttpOnly`, lalu melayani endpoint proxy dengan dua mode: request ke backend upstream untuk endpoint tertentu dan query langsung ke MySQL untuk endpoint data yang butuh scope ketat.
 
 ## Fitur Utama
 
@@ -10,25 +10,25 @@ Node.js + Fastify auth proxy untuk TMAT Monitoring. Service ini menangani login 
 - Layer scope `pemda`:
   - `pemda provinsi` berdasarkan `provinsi_id`
   - `pemda kabupaten/kota` berdasarkan `kabupaten_id`
-- Proxy upstream untuk endpoint TMAT:
+- Endpoint proxy TMAT:
   - `/proxy/perusahaan`
   - `/proxy/perusahaan/:id`
   - `/proxy/device`
   - `/proxy/realtime_all`
   - `/proxy/realtime_device`
   - `/proxy/map`
-- API key diambil dari database dan di-cache di Redis
+- API key diambil dari database dan di-cache di Redis untuk endpoint yang masih memakai upstream
 - Endpoint `device` dan `realtime` yang sensitif terhadap scope memakai query MySQL langsung agar filter perusahaan/provinsi/kabupaten tidak bergantung pada backoffice
 
 ## Role dan Scope
 
 - `admin`
   - akses global
-  - memakai API key admin-tier
+  - memakai API key admin-tier untuk endpoint upstream
 - `perusahaan`
   - hanya dapat melihat data milik `id_perusahaan` sendiri
   - query `id_perusahaan` dari client akan dioverride oleh server
-  - memakai API key perusahaan dari database
+  - memakai API key perusahaan dari database untuk endpoint upstream
 - `pemda`
   - memakai group role `pemda` dari database
   - scope ditentukan dari data user:
@@ -37,10 +37,23 @@ Node.js + Fastify auth proxy untuk TMAT Monitoring. Service ini menangani login 
   - untuk endpoint data dari database, filter wilayah diterapkan langsung di SQL
   - untuk endpoint upstream lain, memakai API key admin-tier
 
+## Sumber Data Endpoint
+
+- Upstream + API key:
+  - `/proxy/perusahaan`
+  - `/proxy/perusahaan/:id`
+  - `/proxy/map`
+- Query MySQL langsung:
+  - `/proxy/device`
+  - `/proxy/realtime_all`
+  - `/proxy/realtime_device`
+
 ## Arsitektur Singkat
 
 - MySQL
   - `users`, `users_groups`, `master_perusahaan` untuk auth dan profile user
+  - `master_device` untuk data device
+  - `data_realtime` untuk data realtime
   - `api_keys` untuk API key upstream
 - Redis
   - blocklist token logout
@@ -171,7 +184,7 @@ npm test -- --run
 ## Catatan Implementasi
 
 - `/proxy/perusahaan` pada backend nyata tetap membutuhkan API key, jadi endpoint ini tidak dianggap public.
-- `/proxy/device`, `/proxy/realtime_all`, dan `/proxy/realtime_device` memakai query SQL langsung ke database TMAT agar filter perusahaan/provinsi/kabupaten konsisten.
+- `/proxy/device`, `/proxy/realtime_all`, dan `/proxy/realtime_device` tidak memakai `X-API-KEY`; ketiganya memakai query SQL langsung ke database TMAT agar filter perusahaan/provinsi/kabupaten konsisten.
 - `/auth/logout` diimplementasikan idempotent.
 - `/auth/me` dan `/auth/login` mengembalikan profile user yang konsisten, termasuk `name` dan `pemdaScopeLevel`.
 - Untuk user `pemda`, layer kota/kabupaten diimplementasikan memakai `kabupaten_id` karena itu yang tersedia di schema database.
