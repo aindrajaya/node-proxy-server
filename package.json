@@ -1,0 +1,53 @@
+{
+  "name": "tmat-auth-proxy",
+  "version": "1.0.0",
+  "description": "Node.js Auth Proxy Server - TMAT Monitoring",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "prepare": "husky install",
+    "test": "vitest --pool=threads"
+  },
+  "dependencies": {
+    "@fastify/cookie": "*",
+    "@fastify/cors": "*",
+    "@fastify/helmet": "*",
+    "@fastify/rate-limit": "*",
+    "@fastify/type-provider-json-schema-to-ts": "*",
+    "bcryptjs": "*",
+    "dotenv": "*",
+    "fastify": "*",
+    "http-proxy-middleware": "*",
+    "ioredis": "*",
+    "jsonwebtoken": "*",
+    "mysql2": "*",
+    "uuid": "*"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/bcryptjs": "*",
+    "@types/jsonwebtoken": "*",
+    "@types/node": "*",
+    "@typescript-eslint/eslint-plugin": "*",
+    "@typescript-eslint/parser": "*",
+    "eslint": "*",
+    "globals": "^17.4.0",
+    "husky": "*",
+    "lint-staged": "*",
+    "prettier": "*",
+    "tsx": "*",
+    "typescript": "*",
+    "typescript-eslint": "^8.57.0",
+    "vitest": "*"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "prettier --write",
+      "eslint --fix"
+    ]
+  }
+}
