@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
+import { randomUUID } from 'crypto';
 import jwt from 'jsonwebtoken';
-import { v4 as uuidv4 } from 'uuid';
 import { config } from '../config';
 import { getUserByIdentifier, verifyPassword } from '../services/userService';
 import { resolveRoleFromGroup } from '../services/roleService';
@@ -125,7 +125,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
       const displayName = user.first_name
         ? `${user.first_name} ${user.last_name || ''}`.trim()
         : user.username;
-      const jti = uuidv4();
+      const jti = randomUUID();
       const iat = Math.floor(Date.now() / 1000);
       const exp = iat + config.JWT_EXPIRES_IN;
 
