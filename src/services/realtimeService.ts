@@ -2,6 +2,7 @@ import { RowDataPacket } from 'mysql2';
 import { mysqlPool } from '../db/mysql';
 import { IProxyUser } from '../types';
 import { canUserAccessDeviceFromDb } from './deviceService';
+import { enrichRowsWithRegionNames } from './regionService';
 
 type QueryValue = string | number | boolean | null | undefined;
 
@@ -53,6 +54,15 @@ function toPositiveInt(value: QueryValue, fallback: number): number {
   }
 
   return parsed;
+}
+
+function shouldIncludeRegionNames(query: RawQuery): boolean {
+  const raw = toStringOrNull(query.include_region_names);
+  if (!raw) {
+    return false;
+  }
+
+  return ['1', 'true', 'yes'].includes(raw.toLowerCase());
 }
 
 function buildScopeClauses(
@@ -131,6 +141,7 @@ export async function listRealtimeAll(user: IProxyUser, query: RawQuery) {
   const latestFilters = buildRealtimeFilters(query, 'dr2', 'md2');
   const limit = Math.min(toPositiveInt(query.limit, 100), 500);
   const offset = toPositiveInt(query.offset, 0);
+  const includeRegionNames = shouldIncludeRegionNames(query);
 
   const whereClauses = [...scope.clauses, ...filters.clauses];
   const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
@@ -184,6 +195,8 @@ export async function listRealtimeAll(user: IProxyUser, query: RawQuery) {
     [...latestParams, ...params],
   );
 
+  const data = includeRegionNames ? await enrichRowsWithRegionNames(rows) : rows.map((row) => ({ ...row }));
+
   return {
     status: true,
     message: 'Data realtime terbaru berhasil diambil',
@@ -192,8 +205,9 @@ export async function listRealtimeAll(user: IProxyUser, query: RawQuery) {
       ...filters.filters,
       ...(offset > 0 ? { offset } : {}),
       ...(limit !== 100 ? { limit } : {}),
+      ...(includeRegionNames ? { include_region_names: 'true' } : {}),
     },
-    data: rows.map((row) => ({ ...row })),
+    data,
   };
 }
 
@@ -211,6 +225,7 @@ export async function listRealtimeDevice(user: IProxyUser, query: RawQuery) {
   const filters = buildRealtimeFilters(query, 'dr', 'md');
   const limit = Math.min(toPositiveInt(query.limit, 100), 1000);
   const offset = toPositiveInt(query.offset, 0);
+  const includeRegionNames = shouldIncludeRegionNames(query);
 
   const [rows] = await mysqlPool.execute<RealtimeRow[]>(
     `
@@ -247,6 +262,8 @@ export async function listRealtimeDevice(user: IProxyUser, query: RawQuery) {
     filters.params,
   );
 
+  const data = includeRegionNames ? await enrichRowsWithRegionNames(rows) : rows.map((row) => ({ ...row }));
+
   return {
     status: true,
     message: 'Data realtime device berhasil diambil',
@@ -255,7 +272,8 @@ export async function listRealtimeDevice(user: IProxyUser, query: RawQuery) {
       ...filters.filters,
       ...(offset > 0 ? { offset } : {}),
       ...(limit !== 100 ? { limit } : {}),
+      ...(includeRegionNames ? { include_region_names: 'true' } : {}),
     },
-    data: rows.map((row) => ({ ...row })),
+    data,
   };
 }

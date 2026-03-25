@@ -1,6 +1,7 @@
 import { RowDataPacket } from 'mysql2';
 import { mysqlPool } from '../db/mysql';
 import { IProxyUser } from '../types';
+import { enrichRowsWithRegionNames } from './regionService';
 
 type QueryValue = string | number | boolean | null | undefined;
 
@@ -52,6 +53,15 @@ function pickDeviceFilters(query: RawQuery): Record<string, string> {
   return filters;
 }
 
+function shouldIncludeRegionNames(query: RawQuery): boolean {
+  const value = query.include_region_names;
+  if (value == null) {
+    return false;
+  }
+
+  return ['1', 'true', 'yes'].includes(String(value).toLowerCase());
+}
+
 function buildScopedWhere(user: IProxyUser, filters: Record<string, string>) {
   const clauses: string[] = [];
   const params: string[] = [];
@@ -87,6 +97,7 @@ export async function listDevices(user: IProxyUser, query: RawQuery) {
   const requestedFilters = pickDeviceFilters(query);
   const { clauses, params, effectiveFilters } = buildScopedWhere(user, requestedFilters);
   const whereSql = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : '';
+  const includeRegionNames = shouldIncludeRegionNames(query);
 
   const [rows] = await mysqlPool.execute<DeviceRow[]>(
     `
@@ -116,12 +127,17 @@ export async function listDevices(user: IProxyUser, query: RawQuery) {
     params,
   );
 
+  const data = includeRegionNames ? await enrichRowsWithRegionNames(rows) : rows.map((row) => ({ ...row }));
+
   return {
     status: true,
     message: 'Daftar device berhasil diambil',
     total: rows.length,
-    filters: effectiveFilters,
-    data: rows.map((row) => ({ ...row })),
+    filters: {
+      ...effectiveFilters,
+      ...(includeRegionNames ? { include_region_names: 'true' } : {}),
+    },
+    data,
   };
 }
 
