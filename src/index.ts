@@ -10,6 +10,10 @@ import authRoutes from './routes/auth';
 import proxyRoutes from './routes/proxy';
 
 export async function buildServer(): Promise<FastifyInstance> {
+  const allowedOrigins = config.ALLOWED_ORIGINS.split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
   const server = Fastify({
     logger: {
       level: 'info',
@@ -19,7 +23,7 @@ export async function buildServer(): Promise<FastifyInstance> {
 
   await server.register(fastifyHelmet);
   await server.register(fastifyCors, {
-    origin: config.ALLOWED_ORIGINS.split(','),
+    origin: allowedOrigins,
     credentials: true,
   });
   await server.register(fastifyRateLimit, {

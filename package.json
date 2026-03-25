@@ -19,6 +19,7 @@
     "@fastify/rate-limit": "*",
     "@fastify/type-provider-json-schema-to-ts": "*",
     "bcryptjs": "*",
+    "cors": "^2.8.6",
     "dotenv": "*",
     "fastify": "*",
     "http-proxy-middleware": "*",
