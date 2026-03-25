@@ -173,6 +173,11 @@ components:
           type: number
         longitude:
           type: number
+      example:
+        id: '1410'
+        nama: Kepulauan Meranti
+        latitude: 1.0157
+        longitude: 102.7124
 
     RegionListResponse:
       type: object
@@ -192,6 +197,19 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Region'
+      example:
+        status: true
+        message: Data kabupaten berhasil diambil
+        total: 2
+        data:
+          - id: '1409'
+            nama: Siak
+            latitude: 0
+            longitude: 0
+          - id: '1410'
+            nama: Kepulauan Meranti
+            latitude: 1.0157
+            longitude: 102.7124
 
     RegionNames:
       type: object
@@ -213,6 +231,11 @@ components:
         kelurahan_nama:
           type: string
           nullable: true
+      example:
+        provinsi_nama: Riau
+        kabupaten_nama: Kepulauan Meranti
+        kecamatan_nama: Tebing Tinggi
+        kelurahan_nama: Selatpanjang Kota
 
     RegionResolveResponse:
       type: object
@@ -227,6 +250,14 @@ components:
           type: string
         data:
           $ref: '#/components/schemas/RegionNames'
+      example:
+        status: true
+        message: Nama wilayah berhasil di-resolve
+        data:
+          provinsi_nama: Riau
+          kabupaten_nama: Kepulauan Meranti
+          kecamatan_nama: Tebing Tinggi
+          kelurahan_nama: Selatpanjang Kota
 
     DeviceRow:
       type: object
@@ -281,6 +312,29 @@ components:
           type: string
       allOf:
         - $ref: '#/components/schemas/RegionNames'
+      example:
+        id: 12
+        device_id_unik: TMAT-RIAU-001
+        id_perusahaan: 34
+        tipe_alat: TMAT
+        alamat: Jl. Contoh No. 1
+        provinsi_id: '14'
+        kabupaten_id: '1410'
+        kecamatan_id: '1410010'
+        kelurahan_id: '1410010001'
+        kode_pos: '28753'
+        desa: Selatpanjang Selatan
+        latitude: 1.0214
+        longitude: 102.7081
+        kode_titik: TITIK-01
+        kode_blok: BLOK-A
+        status: aktif
+        last_online: '2026-03-26 08:12:00'
+        created_at: '2026-01-01 00:00:00'
+        provinsi_nama: Riau
+        kabupaten_nama: Kepulauan Meranti
+        kecamatan_nama: Tebing Tinggi
+        kelurahan_nama: Selatpanjang Kota
 
     DeviceListResponse:
       type: object
@@ -307,6 +361,36 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DeviceRow'
+      example:
+        status: true
+        message: Daftar device berhasil diambil
+        total: 1
+        filters:
+          provinsi_id: '14'
+          include_region_names: 'true'
+        data:
+          - id: 12
+            device_id_unik: TMAT-RIAU-001
+            id_perusahaan: 34
+            tipe_alat: TMAT
+            alamat: Jl. Contoh No. 1
+            provinsi_id: '14'
+            kabupaten_id: '1410'
+            kecamatan_id: '1410010'
+            kelurahan_id: '1410010001'
+            kode_pos: '28753'
+            desa: Selatpanjang Selatan
+            latitude: 1.0214
+            longitude: 102.7081
+            kode_titik: TITIK-01
+            kode_blok: BLOK-A
+            status: aktif
+            last_online: '2026-03-26 08:12:00'
+            created_at: '2026-01-01 00:00:00'
+            provinsi_nama: Riau
+            kabupaten_nama: Kepulauan Meranti
+            kecamatan_nama: Tebing Tinggi
+            kelurahan_nama: Selatpanjang Kota
 
     RealtimeRow:
       type: object
@@ -384,6 +468,36 @@ components:
           type: number
       allOf:
         - $ref: '#/components/schemas/RegionNames'
+      example:
+        id: 9912
+        device_id_unik: TMAT-RIAU-001
+        id_perusahaan: 34
+        timestamp_data: '2026-03-26 08:15:00'
+        tmat_value: 42.1
+        suhu_value: 29.4
+        ph_value: 6.9
+        hujan_value: 0
+        kelembapan_tanah: 48.2
+        baterai_value: 12.3
+        tss_value: null
+        flklhk_value: null
+        api_key_used: null
+        serial_number_value: SN-001
+        id_stasiun_value: ST-001
+        method: POST
+        header_data: null
+        body_data: null
+        provinsi_id: '14'
+        kabupaten_id: '1410'
+        kecamatan_id: '1410010'
+        kelurahan_id: '1410010001'
+        tipe_alat: TMAT
+        alamat: Jl. Contoh No. 1
+        device_internal_id: 12
+        provinsi_nama: Riau
+        kabupaten_nama: Kepulauan Meranti
+        kecamatan_nama: Tebing Tinggi
+        kelurahan_nama: Selatpanjang Kota
 
     RealtimeListResponse:
       type: object
@@ -410,6 +524,44 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/RealtimeRow'
+      example:
+        status: true
+        message: Data realtime terbaru berhasil diambil
+        total: 1
+        filters:
+          start_date: '2026-03-01'
+          end_date: '2026-03-26'
+          include_region_names: 'true'
+        data:
+          - id: 9912
+            device_id_unik: TMAT-RIAU-001
+            id_perusahaan: 34
+            timestamp_data: '2026-03-26 08:15:00'
+            tmat_value: 42.1
+            suhu_value: 29.4
+            ph_value: 6.9
+            hujan_value: 0
+            kelembapan_tanah: 48.2
+            baterai_value: 12.3
+            tss_value: null
+            flklhk_value: null
+            api_key_used: null
+            serial_number_value: SN-001
+            id_stasiun_value: ST-001
+            method: POST
+            header_data: null
+            body_data: null
+            provinsi_id: '14'
+            kabupaten_id: '1410'
+            kecamatan_id: '1410010'
+            kelurahan_id: '1410010001'
+            tipe_alat: TMAT
+            alamat: Jl. Contoh No. 1
+            device_internal_id: 12
+            provinsi_nama: Riau
+            kabupaten_nama: Kepulauan Meranti
+            kecamatan_nama: Tebing Tinggi
+            kelurahan_nama: Selatpanjang Kota
 
 tags:
   - name: Authentication
@@ -591,6 +743,9 @@ paths:
     get:
       summary: Query device data from MySQL with role-aware scoping
       tags: [Proxy Endpoints]
+      description: |
+        Gunakan `include_region_names=true` jika frontend ingin menerima nama wilayah
+        sekaligus tanpa melakukan lookup terpisah ke endpoint region.
       security:
         - cookieAuth: []
       parameters:
@@ -616,10 +771,12 @@ paths:
           name: provinsi_id
           schema:
             type: string
+          example: '14'
         - in: query
           name: kabupaten_id
           schema:
             type: string
+          example: '1410'
         - in: query
           name: kode_titik
           schema:
@@ -633,6 +790,7 @@ paths:
           schema:
             type: boolean
           description: When true, enrich each row with `provinsi_nama`, `kabupaten_nama`, `kecamatan_nama`, and `kelurahan_nama`.
+          example: true
       responses:
         '200':
           description: Device data returned directly from `master_device` with SQL-level scope enforcement and no upstream API key usage
@@ -640,6 +798,34 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DeviceListResponse'
+              examples:
+                withRegionNames:
+                  summary: Device list dengan nama wilayah
+                  value:
+                    status: true
+                    message: Daftar device berhasil diambil
+                    total: 1
+                    filters:
+                      provinsi_id: '14'
+                      include_region_names: 'true'
+                    data:
+                      - id: 12
+                        device_id_unik: TMAT-RIAU-001
+                        id_perusahaan: 34
+                        tipe_alat: TMAT
+                        alamat: Jl. Contoh No. 1
+                        provinsi_id: '14'
+                        kabupaten_id: '1410'
+                        kecamatan_id: '1410010'
+                        kelurahan_id: '1410010001'
+                        desa: Selatpanjang Selatan
+                        latitude: 1.0214
+                        longitude: 102.7081
+                        status: aktif
+                        provinsi_nama: Riau
+                        kabupaten_nama: Kepulauan Meranti
+                        kecamatan_nama: Tebing Tinggi
+                        kelurahan_nama: Selatpanjang Kota
         '401':
           description: No session cookie or revoked session
           content:
@@ -663,6 +849,9 @@ paths:
     get:
       summary: Query latest realtime data per device from MySQL with role-aware scoping
       tags: [Proxy Endpoints]
+      description: |
+        Cocok untuk tabel monitoring terbaru per device. Tambahkan `include_region_names=true`
+        bila frontend ingin label wilayah yang siap ditampilkan.
       security:
         - cookieAuth: []
       parameters:
@@ -702,6 +891,7 @@ paths:
           schema:
             type: boolean
           description: When true, enrich each row with `provinsi_nama`, `kabupaten_nama`, `kecamatan_nama`, and `kelurahan_nama`.
+          example: true
       responses:
         '200':
           description: Latest realtime data returned from `data_realtime` joined with `master_device`, with SQL-level scope enforcement and no upstream API key usage
@@ -709,6 +899,26 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RealtimeListResponse'
+              examples:
+                latestWithRegionNames:
+                  summary: Latest realtime dengan nama wilayah
+                  value:
+                    status: true
+                    message: Data realtime terbaru berhasil diambil
+                    total: 1
+                    filters:
+                      start_date: '2026-03-01'
+                      end_date: '2026-03-26'
+                      include_region_names: 'true'
+                    data:
+                      - id: 9912
+                        device_id_unik: TMAT-RIAU-001
+                        timestamp_data: '2026-03-26 08:15:00'
+                        tmat_value: 42.1
+                        provinsi_id: '14'
+                        kabupaten_id: '1410'
+                        provinsi_nama: Riau
+                        kabupaten_nama: Kepulauan Meranti
         '401':
           description: No session cookie or revoked session
           content:
@@ -732,6 +942,9 @@ paths:
     get:
       summary: Query historical realtime data for a single authorized device from MySQL
       tags: [Proxy Endpoints]
+      description: |
+        Mengembalikan histori data satu device. Nama wilayah tetap opsional melalui
+        `include_region_names=true`.
       security:
         - cookieAuth: []
       parameters:
@@ -740,6 +953,7 @@ paths:
           required: true
           schema:
             type: string
+          example: TMAT-RIAU-001
         - in: query
           name: start_date
           required: true
@@ -767,6 +981,7 @@ paths:
           schema:
             type: boolean
           description: When true, enrich each row with `provinsi_nama`, `kabupaten_nama`, `kecamatan_nama`, and `kelurahan_nama`.
+          example: true
       responses:
         '200':
           description: Historical realtime data returned from `data_realtime` for an authorized device without upstream API key usage
@@ -774,6 +989,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RealtimeListResponse'
+              examples:
+                historicalWithRegionNames:
+                  summary: Histori realtime device dengan nama wilayah
+                  value:
+                    status: true
+                    message: Data realtime device berhasil diambil
+                    total: 2
+                    filters:
+                      device_id: TMAT-RIAU-001
+                      start_date: '2026-03-20'
+                      end_date: '2026-03-26'
+                      include_region_names: 'true'
+                    data:
+                      - id: 9912
+                        device_id_unik: TMAT-RIAU-001
+                        timestamp_data: '2026-03-26 08:15:00'
+                        tmat_value: 42.1
+                        provinsi_nama: Riau
+                        kabupaten_nama: Kepulauan Meranti
+                      - id: 9911
+                        device_id_unik: TMAT-RIAU-001
+                        timestamp_data: '2026-03-26 08:00:00'
+                        tmat_value: 41.7
+                        provinsi_nama: Riau
+                        kabupaten_nama: Kepulauan Meranti
         '400':
           description: Missing required `device_id`
           content:
@@ -817,6 +1057,7 @@ paths:
     get:
       summary: List provinces from reference table
       tags: [Region Lookup]
+      description: Ambil daftar provinsi untuk dropdown level pertama.
       security:
         - cookieAuth: []
       responses:
@@ -826,6 +1067,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RegionListResponse'
+              examples:
+                provinces:
+                  summary: Daftar provinsi
+                  value:
+                    status: true
+                    message: Data provinsi berhasil diambil
+                    total: 2
+                    data:
+                      - id: '12'
+                        nama: Sumatera Utara
+                        latitude: 0
+                        longitude: 0
+                      - id: '14'
+                        nama: Riau
+                        latitude: 0
+                        longitude: 0
         '401':
           description: No session cookie or revoked session
           content:
@@ -849,6 +1106,7 @@ paths:
     get:
       summary: List cities or kabupaten from reference table
       tags: [Region Lookup]
+      description: Ambil daftar kota atau kabupaten, biasanya setelah user memilih provinsi.
       security:
         - cookieAuth: []
       parameters:
@@ -857,6 +1115,7 @@ paths:
           schema:
             type: string
           description: Optional province code prefix filter.
+          example: '14'
       responses:
         '200':
           description: City or kabupaten lookup list
@@ -864,6 +1123,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RegionListResponse'
+              examples:
+                citiesByProvince:
+                  summary: Daftar kabupaten dalam satu provinsi
+                  value:
+                    status: true
+                    message: Data kabupaten berhasil diambil
+                    total: 2
+                    data:
+                      - id: '1409'
+                        nama: Siak
+                        latitude: 0
+                        longitude: 0
+                      - id: '1410'
+                        nama: Kepulauan Meranti
+                        latitude: 1.0157
+                        longitude: 102.7124
         '401':
           description: No session cookie or revoked session
           content:
@@ -887,6 +1162,7 @@ paths:
     get:
       summary: List districts or kecamatan from reference table
       tags: [Region Lookup]
+      description: Ambil daftar kecamatan berdasarkan `kabupaten_id` atau minimal prefix provinsi.
       security:
         - cookieAuth: []
       parameters:
@@ -900,6 +1176,7 @@ paths:
           schema:
             type: string
           description: Optional city or kabupaten code prefix filter.
+          example: '1410'
       responses:
         '200':
           description: District or kecamatan lookup list
@@ -907,6 +1184,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RegionListResponse'
+              examples:
+                districtsByCity:
+                  summary: Daftar kecamatan dalam satu kabupaten
+                  value:
+                    status: true
+                    message: Data kecamatan berhasil diambil
+                    total: 2
+                    data:
+                      - id: '1410010'
+                        nama: Tebing Tinggi
+                        latitude: 0
+                        longitude: 0
+                      - id: '1410020'
+                        nama: Rangsang
+                        latitude: 0
+                        longitude: 0
         '401':
           description: No session cookie or revoked session
           content:
@@ -930,6 +1223,7 @@ paths:
     get:
       summary: List villages or kelurahan from reference table
       tags: [Region Lookup]
+      description: Ambil daftar kelurahan berdasarkan `kecamatan_id` atau prefix parent region.
       security:
         - cookieAuth: []
       parameters:
@@ -948,6 +1242,7 @@ paths:
           schema:
             type: string
           description: Optional district or kecamatan code prefix filter.
+          example: '1410010'
       responses:
         '200':
           description: Village or kelurahan lookup list
@@ -955,6 +1250,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RegionListResponse'
+              examples:
+                villagesByDistrict:
+                  summary: Daftar kelurahan dalam satu kecamatan
+                  value:
+                    status: true
+                    message: Data kelurahan berhasil diambil
+                    total: 2
+                    data:
+                      - id: '1410010001'
+                        nama: Selatpanjang Kota
+                        latitude: 0
+                        longitude: 0
+                      - id: '1410010002'
+                        nama: Selatpanjang Timur
+                        latitude: 0
+                        longitude: 0
         '401':
           description: No session cookie or revoked session
           content:
@@ -978,6 +1289,9 @@ paths:
     get:
       summary: Resolve region names from one or more region ids
       tags: [Region Lookup]
+      description: |
+        Cocok saat frontend sudah memegang ID wilayah dari payload lain dan hanya perlu
+        nama tampilannya.
       security:
         - cookieAuth: []
       parameters:
@@ -985,18 +1299,22 @@ paths:
           name: provinsi_id
           schema:
             type: string
+          example: '14'
         - in: query
           name: kabupaten_id
           schema:
             type: string
+          example: '1410'
         - in: query
           name: kecamatan_id
           schema:
             type: string
+          example: '1410010'
         - in: query
           name: kelurahan_id
           schema:
             type: string
+          example: '1410010001'
       responses:
         '200':
           description: Resolved region names for the provided ids
@@ -1004,6 +1322,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RegionResolveResponse'
+              examples:
+                resolveAllLevels:
+                  summary: Resolve nama seluruh level wilayah
+                  value:
+                    status: true
+                    message: Nama wilayah berhasil di-resolve
+                    data:
+                      provinsi_nama: Riau
+                      kabupaten_nama: Kepulauan Meranti
+                      kecamatan_nama: Tebing Tinggi
+                      kelurahan_nama: Selatpanjang Kota
         '401':
           description: No session cookie or revoked session
           content:

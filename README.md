@@ -16,6 +16,11 @@ Node.js + Fastify auth proxy untuk TMAT Monitoring. Service ini menangani login 
   - `/proxy/device`
   - `/proxy/realtime_all`
   - `/proxy/realtime_device`
+  - `/proxy/regions/provinces`
+  - `/proxy/regions/cities`
+  - `/proxy/regions/districts`
+  - `/proxy/regions/villages`
+  - `/proxy/regions/resolve`
   - `/proxy/map`
 - API key diambil dari database dan di-cache di Redis untuk endpoint yang masih memakai upstream
 - Endpoint `device` dan `realtime` yang sensitif terhadap scope memakai query MySQL langsung agar filter perusahaan/provinsi/kabupaten tidak bergantung pada backoffice
@@ -47,6 +52,108 @@ Node.js + Fastify auth proxy untuk TMAT Monitoring. Service ini menangani login 
   - `/proxy/device`
   - `/proxy/realtime_all`
   - `/proxy/realtime_device`
+  - `/proxy/regions/provinces`
+  - `/proxy/regions/cities`
+  - `/proxy/regions/districts`
+  - `/proxy/regions/villages`
+  - `/proxy/regions/resolve`
+
+## Alur Frontend Wilayah
+
+Frontend disarankan tetap memakai `*_id` sebagai source of truth, lalu memakai endpoint lookup untuk menampilkan nama wilayah.
+
+### 1. Isi dropdown bertingkat
+
+Urutan yang direkomendasikan:
+
+1. Ambil provinsi:
+
+```http
+GET /proxy/regions/provinces
+```
+
+2. Setelah user memilih provinsi, ambil kota/kabupaten:
+
+```http
+GET /proxy/regions/cities?provinsi_id=14
+```
+
+3. Setelah user memilih kota/kabupaten, ambil kecamatan:
+
+```http
+GET /proxy/regions/districts?kabupaten_id=1410
+```
+
+4. Setelah user memilih kecamatan, ambil kelurahan:
+
+```http
+GET /proxy/regions/villages?kecamatan_id=1410010
+```
+
+### 2. Ambil nama wilayah dari ID yang sudah ada
+
+Kalau frontend sudah menerima payload lama yang hanya berisi ID wilayah, gunakan endpoint ini untuk resolve nama tampilannya:
+
+```http
+GET /proxy/regions/resolve?provinsi_id=14&kabupaten_id=1410&kecamatan_id=1410010&kelurahan_id=1410010001
+```
+
+Contoh respons:
+
+```json
+{
+  "status": true,
+  "message": "Nama wilayah berhasil di-resolve",
+  "data": {
+    "provinsi_nama": "Riau",
+    "kabupaten_nama": "Kepulauan Meranti",
+    "kecamatan_nama": "Tebing Tinggi",
+    "kelurahan_nama": "Selatpanjang Kota"
+  }
+}
+```
+
+### 3. Ambil data device atau realtime sekaligus dengan nama wilayah
+
+Jika frontend tidak ingin melakukan lookup tambahan, tambahkan `include_region_names=true`.
+
+Contoh device:
+
+```http
+GET /proxy/device?provinsi_id=14&include_region_names=true
+```
+
+Contoh realtime terbaru:
+
+```http
+GET /proxy/realtime_all?start_date=2026-03-01&end_date=2026-03-26&include_region_names=true
+```
+
+Contoh realtime histori satu device:
+
+```http
+GET /proxy/realtime_device?device_id=TMAT-RIAU-001&start_date=2026-03-20&end_date=2026-03-26&include_region_names=true
+```
+
+Contoh potongan respons row:
+
+```json
+{
+  "device_id_unik": "TMAT-RIAU-001",
+  "provinsi_id": "14",
+  "kabupaten_id": "1410",
+  "kecamatan_id": "1410010",
+  "kelurahan_id": "1410010001",
+  "provinsi_nama": "Riau",
+  "kabupaten_nama": "Kepulauan Meranti",
+  "kecamatan_nama": "Tebing Tinggi",
+  "kelurahan_nama": "Selatpanjang Kota"
+}
+```
+
+Catatan:
+- `desa` di `master_device` sudah berupa string bebas, jadi tidak melewati endpoint lookup wilayah.
+- Untuk filtering dan submit form, tetap kirim `provinsi_id`, `kabupaten_id`, `kecamatan_id`, dan `kelurahan_id`, bukan nama string.
 
 ## Arsitektur Singkat
 
