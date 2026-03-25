@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyReply } from 'fastify';
 import { authenticate } from '../hooks/authenticate';
 import { scopeGuard } from '../hooks/scopeGuard';
 import { listDevices } from '../services/deviceService';
+import { listRegions, resolveRegionLookup } from '../services/regionService';
 import { listRealtimeAll, listRealtimeDevice } from '../services/realtimeService';
 import {
   readUpstreamBody,
@@ -97,6 +98,56 @@ function logUpstreamFailure(
 }
 
 export default async function proxyRoutes(fastify: FastifyInstance) {
+  fastify.get('/regions/provinces', { preHandler: authenticate }, async (req, reply) => {
+    try {
+      const payload = await listRegions('provinsi', sanitizeQuery(req.query as RawQuery));
+      return reply.send(payload);
+    } catch (error) {
+      fastify.log.error({ err: error }, '[Proxy] Region provinces query error');
+      return reply.status(500).send({ error: 'Failed to query provinces data' });
+    }
+  });
+
+  fastify.get('/regions/cities', { preHandler: authenticate }, async (req, reply) => {
+    try {
+      const payload = await listRegions('kabupaten', sanitizeQuery(req.query as RawQuery));
+      return reply.send(payload);
+    } catch (error) {
+      fastify.log.error({ err: error }, '[Proxy] Region cities query error');
+      return reply.status(500).send({ error: 'Failed to query cities data' });
+    }
+  });
+
+  fastify.get('/regions/districts', { preHandler: authenticate }, async (req, reply) => {
+    try {
+      const payload = await listRegions('kecamatan', sanitizeQuery(req.query as RawQuery));
+      return reply.send(payload);
+    } catch (error) {
+      fastify.log.error({ err: error }, '[Proxy] Region districts query error');
+      return reply.status(500).send({ error: 'Failed to query districts data' });
+    }
+  });
+
+  fastify.get('/regions/villages', { preHandler: authenticate }, async (req, reply) => {
+    try {
+      const payload = await listRegions('kelurahan', sanitizeQuery(req.query as RawQuery));
+      return reply.send(payload);
+    } catch (error) {
+      fastify.log.error({ err: error }, '[Proxy] Region villages query error');
+      return reply.status(500).send({ error: 'Failed to query villages data' });
+    }
+  });
+
+  fastify.get('/regions/resolve', { preHandler: authenticate }, async (req, reply) => {
+    try {
+      const payload = await resolveRegionLookup(sanitizeQuery(req.query as RawQuery));
+      return reply.send(payload);
+    } catch (error) {
+      fastify.log.error({ err: error }, '[Proxy] Region resolve query error');
+      return reply.status(500).send({ error: 'Failed to resolve region names' });
+    }
+  });
+
   fastify.get('/map', async (_req, reply) => {
     try {
       return await forwardGet(fastify, reply, {
