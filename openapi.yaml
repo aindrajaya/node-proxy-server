@@ -157,11 +157,267 @@ components:
         error:
           type: string
 
+    Region:
+      type: object
+      required:
+        - id
+        - nama
+        - latitude
+        - longitude
+      properties:
+        id:
+          type: string
+        nama:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+
+    RegionListResponse:
+      type: object
+      required:
+        - status
+        - message
+        - total
+        - data
+      properties:
+        status:
+          type: boolean
+        message:
+          type: string
+        total:
+          type: number
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Region'
+
+    RegionNames:
+      type: object
+      required:
+        - provinsi_nama
+        - kabupaten_nama
+        - kecamatan_nama
+        - kelurahan_nama
+      properties:
+        provinsi_nama:
+          type: string
+          nullable: true
+        kabupaten_nama:
+          type: string
+          nullable: true
+        kecamatan_nama:
+          type: string
+          nullable: true
+        kelurahan_nama:
+          type: string
+          nullable: true
+
+    RegionResolveResponse:
+      type: object
+      required:
+        - status
+        - message
+        - data
+      properties:
+        status:
+          type: boolean
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/RegionNames'
+
+    DeviceRow:
+      type: object
+      properties:
+        id:
+          type: number
+        device_id_unik:
+          type: string
+        id_perusahaan:
+          type: number
+        tipe_alat:
+          type: string
+          nullable: true
+        alamat:
+          type: string
+          nullable: true
+        provinsi_id:
+          type: string
+          nullable: true
+        kabupaten_id:
+          type: string
+          nullable: true
+        kecamatan_id:
+          type: string
+          nullable: true
+        kelurahan_id:
+          type: string
+          nullable: true
+        kode_pos:
+          type: string
+          nullable: true
+        desa:
+          type: string
+          nullable: true
+        latitude:
+          type: number
+        longitude:
+          type: number
+        kode_titik:
+          type: string
+          nullable: true
+        kode_blok:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [aktif, nonaktif, perbaikan]
+        last_online:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+      allOf:
+        - $ref: '#/components/schemas/RegionNames'
+
+    DeviceListResponse:
+      type: object
+      required:
+        - status
+        - message
+        - total
+        - filters
+        - data
+      properties:
+        status:
+          type: boolean
+        message:
+          type: string
+        total:
+          type: number
+        filters:
+          type: object
+          additionalProperties:
+            oneOf:
+              - type: string
+              - type: number
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceRow'
+
+    RealtimeRow:
+      type: object
+      properties:
+        id:
+          type: number
+        device_id_unik:
+          type: string
+        id_perusahaan:
+          type: number
+          nullable: true
+        timestamp_data:
+          type: string
+        tmat_value:
+          type: number
+          nullable: true
+        suhu_value:
+          type: number
+          nullable: true
+        ph_value:
+          type: number
+          nullable: true
+        hujan_value:
+          type: number
+          nullable: true
+        kelembapan_tanah:
+          type: number
+          nullable: true
+        baterai_value:
+          type: number
+          nullable: true
+        tss_value:
+          type: number
+          nullable: true
+        flklhk_value:
+          type: number
+          nullable: true
+        api_key_used:
+          type: string
+          nullable: true
+        serial_number_value:
+          type: string
+          nullable: true
+        id_stasiun_value:
+          type: string
+          nullable: true
+        method:
+          type: string
+          nullable: true
+        header_data:
+          type: string
+          nullable: true
+        body_data:
+          type: string
+          nullable: true
+        provinsi_id:
+          type: string
+          nullable: true
+        kabupaten_id:
+          type: string
+          nullable: true
+        kecamatan_id:
+          type: string
+          nullable: true
+        kelurahan_id:
+          type: string
+          nullable: true
+        tipe_alat:
+          type: string
+          nullable: true
+        alamat:
+          type: string
+          nullable: true
+        device_internal_id:
+          type: number
+      allOf:
+        - $ref: '#/components/schemas/RegionNames'
+
+    RealtimeListResponse:
+      type: object
+      required:
+        - status
+        - message
+        - total
+        - filters
+        - data
+      properties:
+        status:
+          type: boolean
+        message:
+          type: string
+        total:
+          type: number
+        filters:
+          type: object
+          additionalProperties:
+            oneOf:
+              - type: string
+              - type: number
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/RealtimeRow'
+
 tags:
   - name: Authentication
     description: Login, session inspection, and logout routes.
   - name: Proxy Endpoints
     description: Role-aware proxy endpoints backed by either TMAT upstream or direct MySQL queries.
+  - name: Region Lookup
+    description: Lookup and resolve region names from TMAT reference tables.
 
 paths:
   /auth/login:
@@ -372,9 +628,18 @@ paths:
           name: kode_blok
           schema:
             type: string
+        - in: query
+          name: include_region_names
+          schema:
+            type: boolean
+          description: When true, enrich each row with `provinsi_nama`, `kabupaten_nama`, `kecamatan_nama`, and `kelurahan_nama`.
       responses:
         '200':
           description: Device data returned directly from `master_device` with SQL-level scope enforcement and no upstream API key usage
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceListResponse'
         '401':
           description: No session cookie or revoked session
           content:
@@ -432,9 +697,18 @@ paths:
           schema:
             type: number
             default: 0
+        - in: query
+          name: include_region_names
+          schema:
+            type: boolean
+          description: When true, enrich each row with `provinsi_nama`, `kabupaten_nama`, `kecamatan_nama`, and `kelurahan_nama`.
       responses:
         '200':
           description: Latest realtime data returned from `data_realtime` joined with `master_device`, with SQL-level scope enforcement and no upstream API key usage
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RealtimeListResponse'
         '401':
           description: No session cookie or revoked session
           content:
@@ -488,9 +762,18 @@ paths:
           schema:
             type: number
             default: 0
+        - in: query
+          name: include_region_names
+          schema:
+            type: boolean
+          description: When true, enrich each row with `provinsi_nama`, `kabupaten_nama`, `kecamatan_nama`, and `kelurahan_nama`.
       responses:
         '200':
           description: Historical realtime data returned from `data_realtime` for an authorized device without upstream API key usage
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RealtimeListResponse'
         '400':
           description: Missing required `device_id`
           content:
@@ -525,6 +808,216 @@ paths:
           description: Map content returned from upstream
         '502':
           description: Upstream service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /proxy/regions/provinces:
+    get:
+      summary: List provinces from reference table
+      tags: [Region Lookup]
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Province lookup list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegionListResponse'
+        '401':
+          description: No session cookie or revoked session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Invalid or expired session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Province query failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /proxy/regions/cities:
+    get:
+      summary: List cities or kabupaten from reference table
+      tags: [Region Lookup]
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: query
+          name: provinsi_id
+          schema:
+            type: string
+          description: Optional province code prefix filter.
+      responses:
+        '200':
+          description: City or kabupaten lookup list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegionListResponse'
+        '401':
+          description: No session cookie or revoked session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Invalid or expired session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: City query failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /proxy/regions/districts:
+    get:
+      summary: List districts or kecamatan from reference table
+      tags: [Region Lookup]
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: query
+          name: provinsi_id
+          schema:
+            type: string
+          description: Optional province code prefix filter.
+        - in: query
+          name: kabupaten_id
+          schema:
+            type: string
+          description: Optional city or kabupaten code prefix filter.
+      responses:
+        '200':
+          description: District or kecamatan lookup list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegionListResponse'
+        '401':
+          description: No session cookie or revoked session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Invalid or expired session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: District query failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /proxy/regions/villages:
+    get:
+      summary: List villages or kelurahan from reference table
+      tags: [Region Lookup]
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: query
+          name: provinsi_id
+          schema:
+            type: string
+          description: Optional province code prefix filter.
+        - in: query
+          name: kabupaten_id
+          schema:
+            type: string
+          description: Optional city or kabupaten code prefix filter.
+        - in: query
+          name: kecamatan_id
+          schema:
+            type: string
+          description: Optional district or kecamatan code prefix filter.
+      responses:
+        '200':
+          description: Village or kelurahan lookup list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegionListResponse'
+        '401':
+          description: No session cookie or revoked session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Invalid or expired session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Village query failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /proxy/regions/resolve:
+    get:
+      summary: Resolve region names from one or more region ids
+      tags: [Region Lookup]
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: query
+          name: provinsi_id
+          schema:
+            type: string
+        - in: query
+          name: kabupaten_id
+          schema:
+            type: string
+        - in: query
+          name: kecamatan_id
+          schema:
+            type: string
+        - in: query
+          name: kelurahan_id
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Resolved region names for the provided ids
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegionResolveResponse'
+        '401':
+          description: No session cookie or revoked session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Invalid or expired session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Region resolve failed
           content:
             application/json:
               schema:
