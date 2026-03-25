@@ -1,95 +1,177 @@
-# 🚀 TMAT Auth Proxy Service
+# TMAT Auth Proxy Service
 
-High-performance, secure NodeJS Authentication Proxy Server utilizing the `Fastify` engine, explicitly developed to securely transmit dynamic credentials connecting the TMAT React Monitoring Dashboard and the production upstream `portal_v1` backend endpoints.
+Node.js + Fastify auth proxy untuk TMAT Monitoring. Service ini menangani login user dari database TMAT, menyimpan session di cookie `HttpOnly`, lalu meneruskan request ke backend upstream dengan `X-API-KEY` yang sesuai scope user.
 
-## Features
-- **Dynamic Credentials Mappings**: Synchronizes native `X-API-KEY` header injection replacing exposed statically compiled tokens.
-- **Strict Role-Based Scopes**: Implements parameter interceptions, guaranteeing query bounds preventing cross-environment probing seamlessly.
-- **Robust Security Constructs**: 
-  - JWT tokens rendered identically inside browser `HttpOnly` configurations preventing XSS exploitation natively.
-  - Revocations natively mirrored utilizing lightning-fast distributed Redis blocklists.
-  - Implements brute-force protection, native Pino sensitive variable redaction, strict HSTS CORS validation structures.
+## Fitur Utama
 
----
+- Login, session, dan logout berbasis JWT cookie `HttpOnly`
+- Revocation token logout melalui Redis blocklist
+- Role-based access untuk `admin`, `perusahaan`, dan `pemda`
+- Layer scope `pemda`:
+  - `pemda provinsi` berdasarkan `provinsi_id`
+  - `pemda kabupaten/kota` berdasarkan `kabupaten_id`
+- Proxy upstream untuk endpoint TMAT:
+  - `/proxy/perusahaan`
+  - `/proxy/perusahaan/:id`
+  - `/proxy/device`
+  - `/proxy/realtime_all`
+  - `/proxy/realtime_device`
+  - `/proxy/map`
+- API key diambil dari database dan di-cache di Redis
+- Endpoint `device` dan `realtime` yang sensitif terhadap scope memakai query MySQL langsung agar filter perusahaan/provinsi/kabupaten tidak bergantung pada backoffice
 
-## 💻 Running Locally
+## Role dan Scope
 
-### 1. Prerequisites
-- **Node.js** (v18+)
-- **MySQL** Running & configured matching the upstream credentials layouts.
-- **Redis** Running locally (e.g. `localhost:6379`)
+- `admin`
+  - akses global
+  - memakai API key admin-tier
+- `perusahaan`
+  - hanya dapat melihat data milik `id_perusahaan` sendiri
+  - query `id_perusahaan` dari client akan dioverride oleh server
+  - memakai API key perusahaan dari database
+- `pemda`
+  - memakai group role `pemda` dari database
+  - scope ditentukan dari data user:
+    - jika `kabupaten_id` ada, maka scope efektif = `pemda_kabupaten`
+    - jika `kabupaten_id` kosong dan `provinsi_id` ada, maka scope efektif = `pemda_provinsi`
+  - untuk endpoint data dari database, filter wilayah diterapkan langsung di SQL
+  - untuk endpoint upstream lain, memakai API key admin-tier
 
-### 2. Setup Variables
-Copy `.env.example` mapping out the local setups assigning database and caching resources accordingly:
+## Arsitektur Singkat
+
+- MySQL
+  - `users`, `users_groups`, `master_perusahaan` untuk auth dan profile user
+  - `api_keys` untuk API key upstream
+- Redis
+  - blocklist token logout
+  - cache API key
+- Fastify service
+  - `POST /auth/login`
+  - `GET /auth/me`
+  - `GET /auth/debug-session`
+  - `POST /auth/logout`
+  - `/proxy/*`
+
+Dokumen teknis yang lebih detail tersedia di:
+- [Auth Feature Implementation - TMAT Monitoring.md](/C:/work/lokal/pakhamka/gis-kemenlh/proxy-server/Auth%20Feature%20Implementation%20-%20TMAT%20Monitoring.md)
+- [PRD Node.js Auth Proxy Server - TMAT Monitoring.md](/C:/work/lokal/pakhamka/gis-kemenlh/proxy-server/PRD%20Node.js%20Auth%20Proxy%20Server%20-%20TMAT%20Monitoring.md)
+- [openapi.yaml](/C:/work/lokal/pakhamka/gis-kemenlh/proxy-server/openapi.yaml)
+
+## Menjalankan Lokal
+
+### 1. Prasyarat
+
+- Node.js 18+
+- MySQL aktif dan bisa diakses dari mesin lokal
+- Redis aktif
+
+### 2. Install dependency
+
+```bash
+npm install
+```
+
+### 3. Siapkan environment
+
+Salin template environment lalu isi nilainya sesuai environment Anda:
+
 ```bash
 cp .env.example .env
 ```
 
-Review the configurations:
-```env
-PORT=4000
-NODE_ENV=development
-JWT_SECRET=super_secret_for_development_replace_in_prod  # Choose a secure hash!
-COOKIE_NAME=tmat_session
-COOKIE_SECURE=false # Set to true on production HTTPS scopes
-ALLOWED_ORIGINS=http://localhost:5173 # Your React Dashboard Domain URL
-BACKEND_BASE_URL=https://service.server.com/backoffice/api/v1
-```
+Catatan:
+- jangan commit `.env`
+- password yang mengandung `#` atau karakter spesial perlu dibungkus kutip, misalnya `DB_PASSWORD="..."`.
 
-### 3. Install & Start Development Server
+### 4. Jalankan dev server
+
 ```bash
-# Pull dependencies gracefully
-npm install
-
-# Run the dev server instances utilizing watch mode
 npm run dev
 ```
 
-The server should successfully launch answering endpoints along `http://localhost:4000`.
+Service akan berjalan di `http://localhost:4000`.
 
----
+## Smoke Test PowerShell
 
-## 🔗 Frontend App Integration
+Gunakan `-UseBasicParsing` agar PowerShell tidak menampilkan warning parser HTML.
 
-Integrating the Fastify Proxy inside your React Application (`tmat-monitoring-dashboard`) is natively streamlined avoiding `localStorage` vulnerabilities safely:
+### Login
 
-### 1. Set VITE Variables
-Locate your `.env` frontend configurations securely pointing towards the local Fastify instance routing proxy:
-```env
-VITE_API_MODE=dev
-VITE_DEV_API_URL=http://localhost:4000/proxy
-VITE_PROD_API_URL=https://proxy.yourdomain.com/proxy
+```powershell
+$body = @{ username = 'user@example.com'; password = 'your-password' } | ConvertTo-Json
+Invoke-WebRequest -UseBasicParsing -Uri 'http://localhost:4000/auth/login' -Method POST -ContentType 'application/json' -Body $body -SessionVariable s
 ```
 
-### 2. Client Adjustments Overview
-The `apiClient.ts` native definitions automatically fetch `VITE_DEV_API_URL`. Ensure any `fetch()` actions natively carry credentials mapping:
-```typescript
-const response = await fetch(`${baseUrl}/endpoint`, {
-    credentials: 'include' // THIS is imperative transmitting the HttpOnly JWT Cookies safely.
-});
+### Cek user login
+
+```powershell
+Invoke-WebRequest -UseBasicParsing -Uri 'http://localhost:4000/auth/me' -WebSession $s
 ```
 
-### 3. Logging-In
-Executing `AuthContext.tsx` bindings calling `POST /auth/login` via absolute backend URLs returns the session cookies directly natively authenticating queries across subsequent HTTP proxies.
+### Cek scope efektif
 
-```typescript
-const { login } = useAuth();
-// Resolves securely fetching MySQL configurations minting Cookies immediately.
-await login("user@nouser.mail", "password_123"); 
+```powershell
+Invoke-WebRequest -UseBasicParsing -Uri 'http://localhost:4000/auth/debug-session' -WebSession $s
 ```
 
-No tokens are written onto native client memories explicitly hardening React environments reliably.
+### Akses proxy
 
----
+```powershell
+Invoke-WebRequest -UseBasicParsing -Uri 'http://localhost:4000/proxy/perusahaan' -WebSession $s
+Invoke-WebRequest -UseBasicParsing -Uri 'http://localhost:4000/proxy/device' -WebSession $s
+Invoke-WebRequest -UseBasicParsing -Uri 'http://localhost:4000/proxy/realtime_all' -WebSession $s
+```
 
-## 🛠️ Production Ready Commands
+### Logout
 
-When deploying onto execution infrastructures, compile the TypeScript configurations matching PM2 Ecosystem parameters gracefully shutting instances.
+```powershell
+Invoke-WebRequest -UseBasicParsing -Uri 'http://localhost:4000/auth/logout' -Method POST -WebSession $s
+```
+
+`POST /auth/logout` bersifat idempotent, jadi tanpa cookie pun tetap mengembalikan `200`.
+
+## Database Seed
+
+Project menyediakan script seed di [database/seed.js](/C:/work/lokal/pakhamka/gis-kemenlh/proxy-server/database/seed.js).
+
+Seed ini:
+- memakai `bcryptjs`
+- mengikuti group role dari environment:
+  - `ROLE_ADMIN_GROUP_ID`
+  - `ROLE_PERUSAHAAN_GROUP_ID`
+  - `ROLE_PEMDA_PROV_GROUP_ID`
+  - `ROLE_PEMDA_KAB_GROUP_ID`
+  - atau fallback legacy `ROLE_PEMDA_GROUP_ID`
+- membuat contoh user:
+  - `admin`
+  - `perusahaan`
+  - `pemda provinsi`
+  - `pemda kabupaten`
+
+Jalankan:
 
 ```bash
-# Compiles strict Typescript modules towards /dist output
-npm run build 
-
-# Launches PM2 clustering bindings natively matching machine CPUs
-pm2 start ecosystem.config.js
+node database/seed.js
 ```
+
+Default password untuk user seed:
+
+```txt
+123456
+```
+
+## Build dan Test
+
+```bash
+npm run build
+npm run lint
+npm test -- --run
+```
+
+## Catatan Implementasi
+
+- `/proxy/perusahaan` pada backend nyata tetap membutuhkan API key, jadi endpoint ini tidak dianggap public.
+- `/proxy/device`, `/proxy/realtime_all`, dan `/proxy/realtime_device` memakai query SQL langsung ke database TMAT agar filter perusahaan/provinsi/kabupaten konsisten.
+- `/auth/logout` diimplementasikan idempotent.
+- `/auth/me` dan `/auth/login` mengembalikan profile user yang konsisten, termasuk `name` dan `pemdaScopeLevel`.
+- Untuk user `pemda`, layer kota/kabupaten diimplementasikan memakai `kabupaten_id` karena itu yang tersedia di schema database.
