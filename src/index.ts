@@ -20,7 +20,7 @@ export async function buildServer(): Promise<FastifyInstance> {
 
   await server.register(fastifyHelmet);
   await server.register(fastifyCors, {
-    origin: ['https://gambutindonesia.kemenlh.go.id', 'http://localhost:3000'],
+    origin: ['https://gambutindonesia.kemenlh.go.id', 'http://localhost:3000', 'https://gis-monitoring.vercel.app'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true,
   });
