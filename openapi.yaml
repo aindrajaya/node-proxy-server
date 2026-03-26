@@ -563,11 +563,388 @@ components:
             kecamatan_nama: Tebing Tinggi
             kelurahan_nama: Selatpanjang Kota
 
+    PublicMapSummaryResponse:
+      type: object
+      required:
+        - latest_data_date
+        - default_start_date
+        - default_end_date
+        - total_devices
+        - active_devices
+        - critical_devices
+        - last_updated_at
+      properties:
+        latest_data_date:
+          type: string
+          format: date
+          nullable: true
+        default_start_date:
+          type: string
+          format: date
+          nullable: true
+        default_end_date:
+          type: string
+          format: date
+          nullable: true
+        total_devices:
+          type: number
+        active_devices:
+          type: number
+        critical_devices:
+          type: number
+        last_updated_at:
+          type: string
+          nullable: true
+      example:
+        latest_data_date: '2026-03-26'
+        default_start_date: '2026-02-25'
+        default_end_date: '2026-03-26'
+        total_devices: 100
+        active_devices: 91
+        critical_devices: 7
+        last_updated_at: '2026-03-26 09:00:00'
+
+    PublicLatestRealtime:
+      type: object
+      required:
+        - timestamp_data
+        - tmat_value
+        - curah_hujan
+        - kelembapan
+        - suhu_value
+      properties:
+        timestamp_data:
+          type: string
+          nullable: true
+        tmat_value:
+          type: number
+          nullable: true
+        curah_hujan:
+          type: number
+          nullable: true
+        kelembapan:
+          type: number
+          nullable: true
+        suhu_value:
+          type: number
+          nullable: true
+
+    PublicMapDevice:
+      type: object
+      required:
+        - device_id_unik
+        - kode_titik
+        - latitude
+        - longitude
+        - status
+        - tipe_alat
+        - provinsi_id
+        - provinsi_nama
+        - kabupaten_id
+        - kabupaten_nama
+        - kecamatan_id
+        - kecamatan_nama
+        - desa
+        - id_perusahaan
+        - jenis_perusahaan
+        - perusahaan_nama
+        - latest_realtime
+      properties:
+        device_id_unik:
+          type: string
+        kode_titik:
+          type: string
+          nullable: true
+        latitude:
+          type: number
+        longitude:
+          type: number
+        status:
+          type: string
+          enum: [aktif, nonaktif, perbaikan]
+        tipe_alat:
+          type: string
+          nullable: true
+        provinsi_id:
+          type: string
+          nullable: true
+        provinsi_nama:
+          type: string
+          nullable: true
+        kabupaten_id:
+          type: string
+          nullable: true
+        kabupaten_nama:
+          type: string
+          nullable: true
+        kecamatan_id:
+          type: string
+          nullable: true
+        kecamatan_nama:
+          type: string
+          nullable: true
+        desa:
+          type: string
+          nullable: true
+        id_perusahaan:
+          type: number
+          nullable: true
+        jenis_perusahaan:
+          type: string
+          nullable: true
+        perusahaan_nama:
+          type: string
+          nullable: true
+        latest_realtime:
+          $ref: '#/components/schemas/PublicLatestRealtime'
+      example:
+        device_id_unik: TMAT-RIAU-001
+        kode_titik: TITIK-01
+        latitude: 1.0214
+        longitude: 102.7081
+        status: aktif
+        tipe_alat: TMAT
+        provinsi_id: '14'
+        provinsi_nama: Riau
+        kabupaten_id: '1410'
+        kabupaten_nama: Kepulauan Meranti
+        kecamatan_id: '1410010'
+        kecamatan_nama: Tebing Tinggi
+        desa: Selatpanjang Selatan
+        id_perusahaan: 34
+        jenis_perusahaan: PBPH
+        perusahaan_nama: PT Contoh Lestari
+        latest_realtime:
+          timestamp_data: '2026-03-26 08:15:00'
+          tmat_value: 42.1
+          curah_hujan: 0
+          kelembapan: 48.2
+          suhu_value: 29.4
+
+    PublicMapDeviceListResponse:
+      type: object
+      required:
+        - status
+        - message
+        - total
+        - filters
+        - data
+      properties:
+        status:
+          type: boolean
+        message:
+          type: string
+        total:
+          type: number
+        filters:
+          type: object
+          additionalProperties:
+            type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicMapDevice'
+
+    PublicMapAnalyticsBucket:
+      type: object
+      required:
+        - safe
+        - low
+        - medium
+        - high
+        - veryhigh
+        - extreme
+        - offline
+      properties:
+        safe:
+          type: number
+        low:
+          type: number
+        medium:
+          type: number
+        high:
+          type: number
+        veryhigh:
+          type: number
+        extreme:
+          type: number
+        offline:
+          type: number
+
+    PublicMapDailyAnalyticsBucket:
+      allOf:
+        - $ref: '#/components/schemas/PublicMapAnalyticsBucket'
+        - type: object
+          required:
+            - date
+          properties:
+            date:
+              type: string
+              format: date
+
+    PublicMapWeeklyAnalyticsBucket:
+      allOf:
+        - $ref: '#/components/schemas/PublicMapAnalyticsBucket'
+        - type: object
+          required:
+            - week
+          properties:
+            week:
+              type: string
+              format: date
+
+    PublicMapTrendPoint:
+      type: object
+      required:
+        - time
+        - tmat
+      properties:
+        time:
+          type: string
+          format: date
+        tmat:
+          type: number
+          nullable: true
+
+    PublicAvailableDateRange:
+      type: object
+      required:
+        - min_date
+        - max_date
+      properties:
+        min_date:
+          type: string
+          format: date
+          nullable: true
+        max_date:
+          type: string
+          format: date
+          nullable: true
+
+    PublicMapAnalyticsResponse:
+      type: object
+      required:
+        - status
+        - message
+        - filters
+        - daily
+        - weekly
+        - trend
+        - available_date_range
+      properties:
+        status:
+          type: boolean
+        message:
+          type: string
+        filters:
+          type: object
+          additionalProperties:
+            type: string
+        daily:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicMapDailyAnalyticsBucket'
+        weekly:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicMapWeeklyAnalyticsBucket'
+        trend:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicMapTrendPoint'
+        available_date_range:
+          $ref: '#/components/schemas/PublicAvailableDateRange'
+
+    PublicMapFiltersResponse:
+      type: object
+      required:
+        - status
+        - message
+        - data
+      properties:
+        status:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+          required:
+            - provinsi
+            - kabupaten
+            - kecamatan
+            - desa
+            - jenis_perusahaan
+            - available_date_range
+          properties:
+            provinsi:
+              type: array
+              items:
+                type: object
+                required: [id, nama]
+                properties:
+                  id:
+                    type: string
+                  nama:
+                    type: string
+            kabupaten:
+              type: array
+              items:
+                type: object
+                required: [id, nama]
+                properties:
+                  id:
+                    type: string
+                  nama:
+                    type: string
+            kecamatan:
+              type: array
+              items:
+                type: object
+                required: [id, nama]
+                properties:
+                  id:
+                    type: string
+                  nama:
+                    type: string
+            desa:
+              type: array
+              items:
+                type: string
+            jenis_perusahaan:
+              type: array
+              items:
+                type: string
+            available_date_range:
+              $ref: '#/components/schemas/PublicAvailableDateRange'
+      example:
+        status: true
+        message: Public map filters berhasil diambil
+        data:
+          provinsi:
+            - id: '14'
+              nama: Riau
+          kabupaten:
+            - id: '1410'
+              nama: Kepulauan Meranti
+          kecamatan:
+            - id: '1410010'
+              nama: Tebing Tinggi
+          desa:
+            - Selatpanjang Selatan
+          jenis_perusahaan:
+            - PBPH
+            - Perkebunan
+          available_date_range:
+            min_date: '2025-01-01'
+            max_date: '2026-03-26'
+
 tags:
   - name: Authentication
     description: Login, session inspection, and logout routes.
   - name: Proxy Endpoints
     description: Role-aware proxy endpoints backed by either TMAT upstream or direct MySQL queries.
+  - name: Public Map
+    description: Public map endpoints with ready-to-render summary, device, analytics, and filter payloads.
   - name: Region Lookup
     description: Lookup and resolve region names from TMAT reference tables.
 
@@ -676,6 +1053,151 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MessageResponse'
+
+  /public/map/summary:
+    get:
+      summary: Get public map summary metadata
+      tags: [Public Map]
+      responses:
+        '200':
+          description: Public summary payload for map cards and default date range.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicMapSummaryResponse'
+        '500':
+          description: Summary query failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /public/map/devices:
+    get:
+      summary: Get public map devices with latest realtime snapshot
+      tags: [Public Map]
+      parameters:
+        - in: query
+          name: provinsi
+          schema:
+            type: string
+        - in: query
+          name: kabupaten
+          schema:
+            type: string
+        - in: query
+          name: kecamatan
+          schema:
+            type: string
+        - in: query
+          name: desa
+          schema:
+            type: string
+        - in: query
+          name: jenis_perusahaan
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Public device markers with latest realtime values and normalized region names.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicMapDeviceListResponse'
+        '500':
+          description: Device query failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /public/map/analytics:
+    get:
+      summary: Get public analytics for national and filtered map views
+      tags: [Public Map]
+      parameters:
+        - in: query
+          name: start_date
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: end_date
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: provinsi
+          schema:
+            type: string
+        - in: query
+          name: kabupaten
+          schema:
+            type: string
+        - in: query
+          name: kecamatan
+          schema:
+            type: string
+        - in: query
+          name: desa
+          schema:
+            type: string
+        - in: query
+          name: jenis_perusahaan
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Ready-to-render daily, weekly, and trend analytics for the public map.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicMapAnalyticsResponse'
+        '500':
+          description: Analytics query failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /public/map/filters:
+    get:
+      summary: Get public filter option lists for the map
+      tags: [Public Map]
+      parameters:
+        - in: query
+          name: provinsi
+          schema:
+            type: string
+        - in: query
+          name: kabupaten
+          schema:
+            type: string
+        - in: query
+          name: kecamatan
+          schema:
+            type: string
+        - in: query
+          name: desa
+          schema:
+            type: string
+        - in: query
+          name: jenis_perusahaan
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Public filter dropdown payload and available date range.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicMapFiltersResponse'
+        '500':
+          description: Filter query failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /proxy/perusahaan:
     get:
