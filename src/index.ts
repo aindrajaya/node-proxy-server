@@ -27,8 +27,8 @@ export async function buildServer(): Promise<FastifyInstance> {
     global: false,
   });
   await server.register(fastifyCookie);
-  await server.register(authRoutes, { prefix: '/auth' });
-  await server.register(proxyRoutes, { prefix: '/proxy' });
+  await server.register(authRoutes);
+  await server.register(proxyRoutes);
 
   return server;
 }
