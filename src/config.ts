@@ -45,7 +45,6 @@ export const config = {
   JWT_EXPIRES_IN: parseInt(getEnv('JWT_EXPIRES_IN', false, '3600'), 10),
   COOKIE_NAME: getEnv('COOKIE_NAME', false, 'tmat_session'),
   COOKIE_SECURE: getEnv('COOKIE_SECURE', false, 'true') === 'true',
-  ALLOWED_ORIGINS: getEnv('ALLOWED_ORIGINS'),
   BACKEND_BASE_URL: getEnv('BACKEND_BASE_URL'),
   BACKEND_TIMEOUT_MS: parseInt(getEnv('BACKEND_TIMEOUT_MS', false, '10000'), 10),
   BACKEND_RETRY_ATTEMPTS: parseInt(getEnv('BACKEND_RETRY_ATTEMPTS', false, '2'), 10),

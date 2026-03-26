@@ -7,6 +7,7 @@ import { config } from './config';
 import { mysqlPool } from './db/mysql';
 import { connectRedis, redisClient } from './db/redis';
 import authRoutes from './routes/auth';
+import publicMapRoutes from './routes/publicMap';
 import proxyRoutes from './routes/proxy';
 
 export async function buildServer(): Promise<FastifyInstance> {
@@ -19,7 +20,7 @@ export async function buildServer(): Promise<FastifyInstance> {
 
   await server.register(fastifyHelmet);
   await server.register(fastifyCors, {
-    origin: ['https://gambutindonesia.kemenlh.go.id'],
+    origin: ['https://gambutindonesia.kemenlh.go.id', 'http://localhost:3000'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true,
   });
@@ -27,7 +28,8 @@ export async function buildServer(): Promise<FastifyInstance> {
     global: false,
   });
   await server.register(fastifyCookie);
-  await server.register(authRoutes);
+  await server.register(authRoutes, { prefix: '/auth' });
+  await server.register(publicMapRoutes, { prefix: '/public' });
   await server.register(proxyRoutes, { prefix: '/proxy' });
 
   return server;
