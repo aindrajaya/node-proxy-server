@@ -113,12 +113,25 @@ function toStringOrNull(value: QueryValue): string | null {
   return String(value).trim();
 }
 
+const SQL_DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const WIB_DATE_FORMATTER = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Asia/Jakarta',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
 function formatDateOnly(value: string | Date): string {
-  const date = value instanceof Date ? value : new Date(value);
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(date.getUTCDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (SQL_DATE_ONLY_PATTERN.test(trimmed)) {
+      return trimmed;
+    }
+
+    return trimmed.slice(0, 10);
+  }
+
+  return WIB_DATE_FORMATTER.format(value);
 }
 
 function addDays(dateString: string, days: number): string {
