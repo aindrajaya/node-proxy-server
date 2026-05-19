@@ -7,11 +7,21 @@ const {
   mockListPublicMapDevices,
   mockGetPublicMapAnalytics,
   mockGetPublicMapFilters,
+  mockResolvePublicMapScope,
+  MockPublicMapAccessError,
 } = vi.hoisted(() => ({
   mockGetPublicMapSummary: vi.fn(),
   mockListPublicMapDevices: vi.fn(),
   mockGetPublicMapAnalytics: vi.fn(),
   mockGetPublicMapFilters: vi.fn(),
+  mockResolvePublicMapScope: vi.fn(),
+  MockPublicMapAccessError: class PublicMapAccessError extends Error {
+    statusCode: number;
+    constructor(statusCode: number, message: string) {
+      super(message);
+      this.statusCode = statusCode;
+    }
+  },
 }));
 
 vi.mock('../src/services/publicMapService', () => ({
@@ -19,6 +29,11 @@ vi.mock('../src/services/publicMapService', () => ({
   listPublicMapDevices: mockListPublicMapDevices,
   getPublicMapAnalytics: mockGetPublicMapAnalytics,
   getPublicMapFilters: mockGetPublicMapFilters,
+}));
+
+vi.mock('../src/services/publicMapIdentityService', () => ({
+  PublicMapAccessError: MockPublicMapAccessError,
+  resolvePublicMapScope: mockResolvePublicMapScope,
 }));
 
 describe('public map routes', () => {
@@ -62,6 +77,7 @@ describe('public map routes', () => {
   });
 
   it('returns public map devices payload and forwards query filters', async () => {
+    mockResolvePublicMapScope.mockResolvedValue({ role: 'admin' });
     mockListPublicMapDevices.mockResolvedValue({
       status: true,
       message: 'Public map devices berhasil diambil',
@@ -105,11 +121,46 @@ describe('public map routes', () => {
     });
 
     expect(response.statusCode).toBe(200);
-    expect(mockListPublicMapDevices).toHaveBeenCalledWith({
+    expect(mockResolvePublicMapScope).toHaveBeenCalledWith({
       provinsi: '14',
       jenis_perusahaan: 'PBPH',
     });
+    expect(mockListPublicMapDevices).toHaveBeenCalledWith(
+      {
+        provinsi: '14',
+        jenis_perusahaan: 'PBPH',
+      },
+      { role: 'admin' },
+    );
     expect(response.json().total).toBe(1);
+  });
+
+  it('returns 400 when email or role is missing on public map devices', async () => {
+    mockResolvePublicMapScope.mockRejectedValue(
+      new MockPublicMapAccessError(400, 'email and role are required'),
+    );
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/public/map/devices?provinsi=14',
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toEqual({ error: 'email and role are required' });
+    expect(mockListPublicMapDevices).not.toHaveBeenCalled();
+  });
+
+  it('returns 403 when email role pair is invalid on public map devices', async () => {
+    mockResolvePublicMapScope.mockRejectedValue(new MockPublicMapAccessError(403, 'Access denied'));
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/public/map/devices?email=user%40mail.com&role=admin',
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toEqual({ error: 'Access denied' });
+    expect(mockListPublicMapDevices).not.toHaveBeenCalled();
   });
 
   it('returns public analytics payload and forwards date range filters', async () => {
