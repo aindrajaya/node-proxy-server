@@ -1,6 +1,7 @@
 import { RowDataPacket } from 'mysql2';
 import { mysqlPool } from '../db/mysql';
 import { enrichRowsWithRegionNames } from './regionService';
+import { PublicMapScope } from './publicMapIdentityService';
 
 type QueryValue = string | number | boolean | null | undefined;
 
@@ -202,6 +203,42 @@ function buildPublicFilterState(query: RawQuery, mdAlias: string, mpAlias: strin
   return { clauses, params, appliedFilters };
 }
 
+function applyScopedFilters(
+  filters: PublicFilterState,
+  scope: PublicMapScope,
+  mdAlias: string,
+): PublicFilterState {
+  const scopedFilters: PublicFilterState = {
+    clauses: [...filters.clauses],
+    params: [...filters.params],
+    appliedFilters: { ...filters.appliedFilters },
+  };
+
+  if (scope.role === 'perusahaan') {
+    scopedFilters.clauses.push(`${mdAlias}.id_perusahaan = ?`);
+    scopedFilters.params.push(String(scope.perusahaanId));
+    scopedFilters.appliedFilters.id_perusahaan = String(scope.perusahaanId);
+    return scopedFilters;
+  }
+
+  if (scope.role === 'pemda') {
+    if (scope.pemdaScopeLevel === 'kabupaten' && scope.kabupatenId) {
+      scopedFilters.clauses.push(`${mdAlias}.kabupaten_id = ?`);
+      scopedFilters.params.push(scope.kabupatenId);
+      scopedFilters.appliedFilters.kabupaten = scope.kabupatenId;
+      return scopedFilters;
+    }
+
+    if (scope.pemdaScopeLevel === 'provinsi' && scope.provinsiId) {
+      scopedFilters.clauses.push(`${mdAlias}.provinsi_id = ?`);
+      scopedFilters.params.push(scope.provinsiId);
+      scopedFilters.appliedFilters.provinsi = scope.provinsiId;
+    }
+  }
+
+  return scopedFilters;
+}
+
 function classifyTmatLevel(tmatValue: number | null): TmatLevel {
   if (tmatValue == null || Number.isNaN(Number(tmatValue))) {
     return 'offline';
@@ -326,8 +363,9 @@ export async function getPublicMapSummary() {
   };
 }
 
-export async function listPublicMapDevices(query: RawQuery) {
-  const filters = buildPublicFilterState(query, 'md', 'mp');
+export async function listPublicMapDevices(query: RawQuery, scope: PublicMapScope) {
+  const baseFilters = buildPublicFilterState(query, 'md', 'mp');
+  const filters = applyScopedFilters(baseFilters, scope, 'md');
   const whereSql = buildDeviceWhereSql(filters);
 
   const [rows] = await mysqlPool.execute<PublicDeviceRow[]>(

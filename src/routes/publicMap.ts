@@ -5,6 +5,10 @@ import {
   getPublicMapSummary,
   listPublicMapDevices,
 } from '../services/publicMapService';
+import {
+  PublicMapAccessError,
+  resolvePublicMapScope,
+} from '../services/publicMapIdentityService';
 
 type QueryValue = string | number | boolean | null | undefined;
 
@@ -23,9 +27,15 @@ export default async function publicMapRoutes(fastify: FastifyInstance) {
 
   fastify.get('/map/devices', async (req, reply) => {
     try {
-      const payload = await listPublicMapDevices(req.query as RawQuery);
+      const query = req.query as RawQuery;
+      const scope = await resolvePublicMapScope(query);
+      const payload = await listPublicMapDevices(query, scope);
       return reply.send(payload);
     } catch (error) {
+      if (error instanceof PublicMapAccessError) {
+        return reply.status(error.statusCode).send({ error: error.message });
+      }
+
       fastify.log.error({ err: error }, '[PublicMap] Devices query error');
       return reply.status(500).send({ error: 'Failed to query public map devices' });
     }
