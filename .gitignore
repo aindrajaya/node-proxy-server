@@ -1,5 +1,4 @@
 node_modules
-.env
 dist
 database
 *.log
@@ -7,3 +6,5 @@ lint_errors.txt
 build_errors.txt
 temp_auto_push.bat
 temp_interactive_push.bat
+config.bat
+branch_structure.json
