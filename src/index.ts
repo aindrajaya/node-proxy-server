@@ -5,7 +5,7 @@ import fastifyHelmet from '@fastify/helmet';
 import fastifyRateLimit from '@fastify/rate-limit';
 import { config } from './config';
 import { mysqlPool } from './db/mysql';
-import { connectRedis, redisClient } from './db/redis';
+import { connectRedis, isRedisReady, redisClient } from './db/redis';
 import authRoutes from './routes/auth';
 import publicMapRoutes from './routes/publicMap';
 import proxyRoutes from './routes/proxy';
@@ -28,6 +28,14 @@ export async function buildServer(): Promise<FastifyInstance> {
     global: false,
   });
   await server.register(fastifyCookie);
+  server.get('/live', async () => ({ status: 'live' }));
+  server.get('/ready', async (_req, reply) => {
+    if (!isRedisReady()) {
+      return reply.status(503).send({ status: 'not_ready' });
+    }
+
+    return { status: 'ready' };
+  });
   await server.register(authRoutes);
   await server.register(publicMapRoutes, { prefix: '/public' });
   await server.register(proxyRoutes, { prefix: '/proxy' });
@@ -43,7 +51,7 @@ export async function closeServer(server: FastifyInstance): Promise<void> {
   }
 }
 
-async function start(): Promise<void> {
+export async function start(): Promise<FastifyInstance> {
   await connectRedis();
   const server = await buildServer();
 
@@ -61,14 +69,17 @@ async function start(): Promise<void> {
     void shutdown('SIGTERM');
   });
 
-  try {
-    await server.listen({ port: config.PORT, host: '0.0.0.0' });
-  } catch (err) {
-    server.log.error(err);
-    process.exit(1);
-  }
+  await server.listen({ port: config.PORT, host: '0.0.0.0' });
+  server.log.info({ port: config.PORT }, '[Startup] HTTP server listening');
+  return server;
 }
 
 if (require.main === module) {
-  void start();
+  void start().catch((error: unknown) => {
+    const details = error instanceof Error
+      ? { name: error.name, message: error.message }
+      : { name: 'UnknownError', message: 'Unexpected startup failure' };
+    console.error('[Startup] Fatal bootstrap failure', details);
+    process.exit(1);
+  });
 }
