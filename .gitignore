@@ -4,5 +4,5 @@ database
 *.log
 lint_errors.txt
 build_errors.txt
-config.bat
-branch_structure.json
+thedocs
+.env
