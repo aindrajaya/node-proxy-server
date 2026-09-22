@@ -1074,9 +1074,23 @@ paths:
 
   /public/map/devices:
     get:
-      summary: Get public map devices with latest realtime snapshot
+      summary: Get public map devices with latest realtime snapshot (scoped by email and role)
       tags: [Public Map]
       parameters:
+        - in: query
+          name: email
+          required: true
+          description: Email user yang harus cocok dengan data user di database.
+          schema:
+            type: string
+            format: email
+        - in: query
+          name: role
+          required: true
+          description: Role user yang harus cocok dengan role hasil mapping database.
+          schema:
+            type: string
+            enum: [admin, perusahaan, pemda]
         - in: query
           name: provinsi
           schema:
@@ -1099,11 +1113,23 @@ paths:
             type: string
       responses:
         '200':
-          description: Public device markers with latest realtime values and normalized region names.
+          description: Public device markers with latest realtime values and normalized region names. Data otomatis dibatasi berdasarkan scope user dari DB.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PublicMapDeviceListResponse'
+        '400':
+          description: email/role missing or role value is invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Access denied (email tidak ditemukan, role mismatch, atau scope user tidak valid).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Device query failed
           content:
